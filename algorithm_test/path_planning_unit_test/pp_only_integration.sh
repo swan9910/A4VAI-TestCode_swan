@@ -1,20 +1,21 @@
 #!/bin/bash
 # pp_only_integration.sh
 # Docker 내부에서 실행:
-#   bash /home/user/workspace/ros2/ros2_ws/src/pathplanning/pp_only_integration.sh
+#   bash /home/user/a4vai_ws/pathplanning/pp_only_integration.sh
 
 set -e
 
 # ─── ROS2 환경 ─────────────────────────────────────────────────────
-source /opt/ros/humble/setup.bash
-source /home/user/workspace/ros2/ros2_ws/install/setup.bash 2>/dev/null || true
+source /opt/ros/jazzy/setup.bash
+source /home/user/a4vai_ws/install/setup.bash 2>/dev/null || true
+export PYTHONPATH=/usr/local/lib/python3.12/dist-packages:${PYTHONPATH}
 
 # ─── 경로 설정 (Docker 내부) ────────────────────────────────────────
-CONVERT_PY="/home/user/workspace/ros2/ros2_ws/src/algorithm_test/algorithm_test/path_planning_unit_test/convert_waypoints.py"
-HEIGHTMAP="/home/user/workspace/ros2/ros2_ws/src/pathplanning/pathplanning/map/IMG_0268_1000.png"
-RESULTS="/home/user/workspace/ros2/ros2_ws/src/pathplanning/pathplanning/Results_Images"
+CONVERT_PY="/home/user/a4vai_ws/algorithm_test/algorithm_test/path_planning_unit_test/convert_waypoints.py"
+HEIGHTMAP="/home/user/a4vai_ws/pathplanning/pathplanning/map/IMG_0268_1000.png"
+RESULTS="/home/user/a4vai_ws/pathplanning/pathplanning/Results_Images"
 WAIT_TIMEOUT=600   # PSO 최대 대기 시간 (초)
-HEARTBEAT_WAIT=2   # Plan2WP 시작 후 heartbeat 대기 (초)
+HEARTBEAT_WAIT=5   # Plan2WP 시작 후 heartbeat 대기 (초)
 
 # ───────────────────────────────────────────────────────────────────
 
@@ -186,9 +187,9 @@ TOTAL_WP=$(wc -l < "$FINAL")
 echo "  → path_final.txt (총 $TOTAL_WP 웨이포인트)"
 
 # Gazebo 좌표 변환
-FINAL_GAZEBO="$RESULTS/path_final_gazebo.txt"
-python3 "$CONVERT_PY" "$FINAL" "$FINAL_GAZEBO"
-echo "  → path_final_gazebo.txt 저장"
+FINAL_PX4="$RESULTS/path_final_px4.txt"
+python3 "$CONVERT_PY" "$FINAL" "$FINAL_PX4"
+echo "  → path_final_px4.txt 저장"
 
 stop_heartbeats
 
@@ -201,7 +202,7 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 
-img  = cv2.imread('/home/user/workspace/ros2/ros2_ws/src/pathplanning/pathplanning/map/IMG_0268_1000_expanded.png', cv2.IMREAD_GRAYSCALE)
+img  = cv2.imread('$HEIGHTMAP', cv2.IMREAD_GRAYSCALE)
 data = np.loadtxt('$FINAL')
 
 plt.figure(figsize=(10, 10))
@@ -222,6 +223,6 @@ PYEOF
 echo ""
 echo "╔═══════════════════════════════════════════╗"
 echo "║  완료!  Results_Images/path_final.txt        (픽셀)  ║"
-echo "║          Results_Images/path_final_gazebo.txt (Gazebo) ║"
+echo "║          Results_Images/path_final_px4.txt (PX4) ║"
 echo "║          Results_Images/path_final_2d.png             ║"
 echo "╚═══════════════════════════════════════════╝"

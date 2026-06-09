@@ -70,10 +70,10 @@ def convert(input_path, output_path):
         dx = gx - start_gx
         dy = gy - start_gy
         dz = gz - start_gz
-        result.append([-dy, -dx, dz])
+        result.append([-dy, dx, dz])
 
     result = np.array(result)
-    np.savetxt(output_path, result, fmt="%.4f", header="x y z (local relative to start, -y -x z)")
+    np.savetxt(output_path, result, fmt="%.4f", header="x y z (local relative to start, -y x z = PX4 NED-like)")
 
     print(f"변환 완료: {output_path}")
     print(f"웨이포인트 수: {len(result)}")
@@ -102,6 +102,6 @@ if __name__ == "__main__":
         output_path = sys.argv[2]
     else:
         base = os.path.splitext(os.path.basename(input_path))[0]
-        output_path = os.path.join(os.path.dirname(input_path), base + "_gazebo.txt")
+        output_path = os.path.join(os.path.dirname(input_path), base + "_px4.txt")
 
     convert(input_path, output_path)
