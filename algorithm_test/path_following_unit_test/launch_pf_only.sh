@@ -20,12 +20,12 @@
 #       즉, ENU (0,0,3) → ENU (70, -16.5, 3) (동쪽 70m + 남쪽 16.5m, 장애물 우회 경로)
 #
 # Logs: ${LOG_DIR}/  (영구 보존)
-# CSV:  /home/user/flight_logs/<timestamp>_pf_only.csv
+# CSV:  /home/user/a4vai_ws/logs/flight_csv/<timestamp>_pf_only.csv
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-LOG_DIR=/home/user/pf_only_logs
+LOG_DIR=/home/user/a4vai_ws/logs/pf_only
 mkdir -p ${LOG_DIR}
 rm -f ${LOG_DIR}/*.log
 
@@ -53,8 +53,8 @@ EOF
 echo "wp.csv set to NED (-16.5, 70, 3) = ENU (70, -16.5, 3) for pf-only mode"
 
 echo "[0/6] flight_logger (offboard 와 동시 시작 — takeoff 단계 데이터까지 잡음)"
-mkdir -p /home/user/flight_logs
-DIAG_CSV=/home/user/flight_logs/$(date +%Y%m%d_%H%M%S)_pf_only.csv
+mkdir -p /home/user/a4vai_ws/logs/flight_csv
+DIAG_CSV=/home/user/a4vai_ws/logs/flight_csv/$(date +%Y%m%d_%H%M%S)_pf_only.csv
 python3 ${SCRIPT_DIR}/../lib/flight_logger.py \
   --duration ${DURATION} --csv ${DIAG_CSV} \
   > ${LOG_DIR}/flight_logger.log 2>&1 &

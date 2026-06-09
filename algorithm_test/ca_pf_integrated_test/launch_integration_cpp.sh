@@ -10,9 +10,9 @@
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# bind-mount 안에 로그 두면 host 에서 실시간 보임 (/home/ercuam/A4VAI-Algorithms-ROS2/test_mppi/logs/integration_cpp/)
-LOG_DIR=/home/user/a4vai_ws/test_mppi/logs/integration_cpp
-FLIGHT_LOG_DIR=/home/user/a4vai_ws/test_mppi/logs/flight_csv
+# bind-mount 안에 로그 두면 host 에서 실시간 보임 (/home/ercuam/A4VAI-Algorithms-ROS2/logs/integration_cpp/)
+LOG_DIR=/home/user/a4vai_ws/logs/integration_cpp
+FLIGHT_LOG_DIR=/home/user/a4vai_ws/logs/flight_csv
 mkdir -p ${LOG_DIR} ${FLIGHT_LOG_DIR}
 rm -f ${LOG_DIR}/*.log
 

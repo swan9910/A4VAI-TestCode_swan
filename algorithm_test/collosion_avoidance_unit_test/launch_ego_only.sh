@@ -15,12 +15,12 @@
 #   - ego-planner 단독으로 c-track 장애물 회피 확인
 #
 # Logs: ${LOG_DIR}/  (영구 보존)
-# CSV:  /home/user/flight_logs/<timestamp>_ego_only.csv
+# CSV:  /home/user/a4vai_ws/logs/flight_csv/<timestamp>_ego_only.csv
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-LOG_DIR=/home/user/ego_only_logs
+LOG_DIR=/home/user/a4vai_ws/logs/ego_only
 mkdir -p ${LOG_DIR}
 rm -f ${LOG_DIR}/*.log
 
@@ -40,8 +40,8 @@ GOAL_Z=3.0
 DURATION=120        # 70m / 1m/s ≈ 70s + takeoff/여유
 
 echo "[0/5] flight_logger (offboard 와 동시 시작 — takeoff 단계 데이터까지 잡음)"
-mkdir -p /home/user/flight_logs
-DIAG_CSV=/home/user/flight_logs/$(date +%Y%m%d_%H%M%S)_ego_only.csv
+mkdir -p /home/user/a4vai_ws/logs/flight_csv
+DIAG_CSV=/home/user/a4vai_ws/logs/flight_csv/$(date +%Y%m%d_%H%M%S)_ego_only.csv
 python3 ${SCRIPT_DIR}/../lib/flight_logger.py \
   --duration ${DURATION} --csv ${DIAG_CSV} \
   > ${LOG_DIR}/flight_logger.log 2>&1 &

@@ -2,9 +2,9 @@
 """
 /lidar/points_world 누적해서 단일 PCD/NPY 로 저장 (매 실행마다 덮어쓰기).
 
-저장 경로 (host 에선 /home/ercuam/A4VAI-Algorithms-ROS2/test_mppi/logs/):
-  /home/user/a4vai_ws/test_mppi/logs/accumulated_pc.pcd  (ASCII PCD, CloudCompare 등)
-  /home/user/a4vai_ws/test_mppi/logs/accumulated_pc.npy  (numpy, plot 용)
+저장 경로 (host 에선 /home/ercuam/A4VAI-Algorithms-ROS2/logs/):
+  /home/user/a4vai_ws/logs/accumulated_pc.pcd  (ASCII PCD, CloudCompare 등)
+  /home/user/a4vai_ws/logs/accumulated_pc.npy  (numpy, plot 용)
 
 Voxel downsampling: 같은 0.5m 셀 내 점은 1개만 유지 (메모리 절약).
 """
@@ -20,8 +20,8 @@ from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2
 
 
-OUT_PCD = '/home/user/a4vai_ws/test_mppi/logs/accumulated_pc.pcd'
-OUT_NPY = '/home/user/a4vai_ws/test_mppi/logs/accumulated_pc.npy'
+OUT_PCD = '/home/user/a4vai_ws/logs/accumulated_pc.pcd'
+OUT_NPY = '/home/user/a4vai_ws/logs/accumulated_pc.npy'
 VOXEL = 0.5    # 0.5m grid
 
 
