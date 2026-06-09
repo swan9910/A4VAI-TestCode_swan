@@ -59,7 +59,7 @@ class CAPFIntegrationTest(Node):
         self.pub_px4.declareAttitudeCommandPublisher()                  # Declare PX4 Attitude Command Publisher
         # self.pub_px4.declareFusionWeightPublisher() 
         self.pub_px4.declareTrajectorySetpointPublisher()
-        self.weight_publisher = self.create_publisher(FusionWeight, '/fmu/in/fusion_weight', self.qos_profile_px4)
+        self.weight_publisher = self.create_publisher(FusionWeight, '/vehicle1/fmu/in/fusion_weight', self.qos_profile_px4)
 
         # module data publisher
         self.pub_module = ModulePublisher(self)

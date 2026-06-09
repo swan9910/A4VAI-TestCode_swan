@@ -2,9 +2,7 @@
 import numpy as np
 import math
 import time
-import os
 import rclpy
-
 from rclpy.clock import Clock
 # custom libraries
 from .common_fuctions import convert_quaternion2euler, BodytoNED, DCM_from_euler_angle, NEDtoBody
@@ -34,7 +32,7 @@ class PX4Subscriber(object):
     def declareVehicleLocalPositionSubscriber(self):
         self.node.vehicle_local_position_subscriber = self.node.create_subscription(
             VehicleLocalPosition,
-            "/fmu/out/vehicle_local_position",
+            "/vehicle1/fmu/out/vehicle_local_position",
             lambda msg: vehicle_local_position_callback(self.node, msg),
             self.node.qos_profile_px4,
         )
@@ -43,7 +41,7 @@ class PX4Subscriber(object):
     def declareVehicleAttitudeSubscriber(self):
         self.node.vehicle_attitude_subscriber = self.node.create_subscription(
             VehicleAttitude,
-            "/fmu/out/vehicle_attitude",
+            "/vehicle1/fmu/out/vehicle_attitude",
             lambda msg: vehicle_attitude_callback(self.node, msg),
             self.node.qos_profile_px4,
         )
@@ -154,9 +152,7 @@ class HeartbeatSubscriber(object):
 # update attitude offboard command from path following
 def PF_Att2Control_callback(node, msg):
     node.veh_att_set = node.veh_att_set
-    node.veh_att_set.roll_body = msg.roll_body
-    node.veh_att_set.pitch_body = msg.pitch_body
-    node.veh_att_set.yaw_body = msg.yaw_body
+    # roll_body / pitch_body / yaw_body fields removed in newer px4_msgs
     node.veh_att_set.yaw_sp_move_rate = msg.yaw_sp_move_rate
     node.veh_att_set.q_d[0] = msg.q_d[0]
     node.veh_att_set.q_d[1] = msg.q_d[1]
@@ -169,74 +165,50 @@ def PF_Att2Control_callback(node, msg):
 # update velocity offboard command from collision avoidance
 def CA2Control_callback(node, msg):
 
-    vy_gain = 1.0
-    yaw_gain = 0.5  # yaw 출력 절반으로 감소 (과도한 회전 방지)
+    vy_gain = 8.0
+    yaw_gain = 1.0
 
-    # 로그 파일 초기화 (첫 콜백에서만)
-    if not hasattr(node, '_ca_log_file_initialized'):
-        node._ca_log_file_initialized = True
-        log_dir = "/home/user/workspace/ros2/logs"
-        os.makedirs(log_dir, exist_ok=True)
-        node._ca_log_path = os.path.join(log_dir, "ca_commands_integrated.csv")
-        with open(node._ca_log_path, "w") as f:
-            f.write("timestamp,vy_raw,yaw_raw,vx_final,vy_final,yaw_final,rand_point\n")
-        node.get_logger().info(f"CA command logging to: {node._ca_log_path}")
+    # # Velocity ramping: CA 진입 초기에는 현재 vx 유지, 점진적으로 ca_initial_vx로 변경
+    # vx_command = node.veh_vel_set.ca_initial_vx
 
-    # Velocity ramping: CA 진입 초기에는 현재 vx 유지, 점진적으로 ca_initial_vx로 변경
-    vx_command = node.veh_vel_set.ca_initial_vx
+    # if node.veh_vel_set.ca_start_time is not None:
+    #     elapsed = time.time() - node.veh_vel_set.ca_start_time
 
-    if node.veh_vel_set.ca_start_time is not None:
-        elapsed = time.time() - node.veh_vel_set.ca_start_time
+    #     # 초기 딜레이 적용 (fusion weight 딜레이와 동기화)
+    #     if elapsed < node.veh_vel_set.ca_ramp_delay:
+    #         # 딜레이 기간: 현재 vx 유지 (피치 급격한 변화 방지)
+    #         vx_command = node.state_var.vx_b
+    #     else:
+    #         adjusted_elapsed = elapsed - node.veh_vel_set.ca_ramp_delay
 
-        # 초기 딜레이 적용 (fusion weight 딜레이와 동기화)
-        if elapsed < node.veh_vel_set.ca_ramp_delay:
-            # 딜레이 기간: 현재 vx 유지 (피치 급격한 변화 방지)
-            vx_command = node.state_var.vx_b
-        else:
-            adjusted_elapsed = elapsed - node.veh_vel_set.ca_ramp_delay
+    #         if adjusted_elapsed < node.veh_vel_set.ca_ramp_duration:
+    #             # Ramping 중: smootherstep으로 현재 vx → ca_initial_vx
+    #             t = adjusted_elapsed / node.veh_vel_set.ca_ramp_duration
+    #             # Smootherstep (5차 S-curve - 피치 변화 최소화)
+    #             alpha = t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
 
-            if adjusted_elapsed < node.veh_vel_set.ca_ramp_duration:
-                # Ramping 중: smootherstep으로 현재 vx → ca_initial_vx
-                t = adjusted_elapsed / node.veh_vel_set.ca_ramp_duration
-                # Smootherstep (5차 S-curve - 피치 변화 최소화)
-                alpha = t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
+    #             # 현재 실제 vx와 목표 vx 사이 보간
+    #             current_vx = node.state_var.vx_b
+    #             vx_command = current_vx * (1.0 - alpha) + node.veh_vel_set.ca_initial_vx * alpha
+    #         # else: ramping 완료, ca_initial_vx 사용
 
-                # 현재 실제 vx와 목표 vx 사이 보간
-                current_vx = node.state_var.vx_b
-                vx_command = current_vx * (1.0 - alpha) + node.veh_vel_set.ca_initial_vx * alpha
-            # else: ramping 완료, ca_initial_vx 사용
+    # # 충돌회피 중에는 ramped vx를 사용 (회피 완료 시에는 PF로 자연스럽게 전환)
+    # # rand_point_flag는 회피 완료 후 경로 복귀 상태를 의미
+    # if node.flags.rand_point_flag == True:
+    #     # 회피 완료 후 경로 복귀: vx 유지하면서 측면 속도와 yaw는 0
+    #     node.veh_vel_set.body_velocity = np.array([vx_command, 0.0, 0.0])
+    #     node.veh_vel_set.yawspeed = 0.0
+    # else:
+    #     # 충돌회피 진행 중: ramped vx 사용, vy와 yaw만 CA 명령 사용
+    # AirSim→Gazebo 90도 오프셋 보정: body [vx,vy] → [vy, vx]
+    node.veh_vel_set.body_velocity = np.array([msg.linear.y, msg.linear.x, 0])
 
-    # 충돌회피 중에는 ramped vx를 사용 (회피 완료 시에는 PF로 자연스럽게 전환)
-    # rand_point_flag는 회피 완료 후 경로 복귀 상태를 의미
-    if node.flags.rand_point_flag == True:
-        # 회피 완료 후 경로 복귀: vx 유지하면서 측면 속도와 yaw는 0
-        node.veh_vel_set.body_velocity = np.array([vx_command, 0.0, 0.0])
-        node.veh_vel_set.yawspeed = 0.0
-        vx_final, vy_final, yaw_final = vx_command, 0.0, 0.0
-    else:
-        # 충돌회피 진행 중: ramped vx 사용, vy와 yaw만 CA 명령 사용
-        # direct_infer.py에서 이미 방향 결정됨 - vy와 yaw 모두 그대로 사용
-        vy = - msg.linear.y * vy_gain  # 그대로 사용
-        yaw = - msg.angular.z * yaw_gain  # 부호 반전 제거 - vy와 같은 방향으로 회전
-
-        # 안전 제한
-        vy = np.clip(vy, -6.0, 6.0)
-        yaw = np.clip(yaw, -1.5, 1.5)  # yaw_gain=0.5 적용 후 최대값
-
-        node.veh_vel_set.body_velocity = np.array([vx_command, vy, 0])
-        node.veh_vel_set.yawspeed = yaw
-        vx_final, vy_final, yaw_final = vx_command, vy, yaw
+    node.veh_vel_set.yawspeed = -msg.angular.z*yaw_gain
 
     node.veh_vel_set.ned_velocity = BodytoNED(node.veh_vel_set.body_velocity, node.state_var.dcm_b2n)
 
     # 고도는 유지
     node.veh_vel_set.ned_velocity[2] = 0.0
-
-    # 파일 로깅
-    timestamp = node.get_clock().now().nanoseconds / 1e9
-    with open(node._ca_log_path, "a") as f:
-        f.write(f"{timestamp:.3f},{msg.linear.y:.4f},{msg.angular.z:.4f},"
-               f"{vx_final:.4f},{vy_final:.4f},{yaw_final:.4f},{int(node.flags.rand_point_flag)}\n")
 
 # subscribe convey local waypoint complete flag from path following
 def vehicle_local_position_callback(node, msg):

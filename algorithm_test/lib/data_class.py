@@ -36,8 +36,7 @@ class CollisionAvoidanceVariable:
         self.lidar_counter = 0
         self.sign = 0.
         self.time = self.clock.now()
-        # self.yaw_0 = 30*np.pi/180.
-        self.yaw_0 = -5*np.pi/180.
+        self.yaw_0 = 0*np.pi/180.
 
         # Collision Avoidance Velocity Command Offset
         self.vx_offset = -1.130069137
@@ -61,7 +60,7 @@ class OffboardVariable:
 
 class GuidVariable:
     def __init__(self):
-        self.init_pos = np.array([0., 0., 3.0])
+        self.init_pos = np.array([0., 0., 4.0])
         self.waypoint_x = []
         self.waypoint_y = []
         self.waypoint_z = []
@@ -74,13 +73,12 @@ class GuidVariable:
 
 class ModeStatus:
     def __init__(self):
-        self.DISARM                 = True
+        self.DISARM                 = True 
         self.TAKEOFF                = False
         self.OFFBOARD               = False
         self.COLLISION_AVOIDANCE    = False
         self.PATH_FOLLOWING         = False
         self.LANDING                = False
-        self.is_disarmed            = False
 
 class Flags:
     def __init__(self):

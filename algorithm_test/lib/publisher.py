@@ -32,7 +32,7 @@ class PX4Publisher:
     def declareVehicleCommandPublisher(self):
         self.node.vehicle_command_publisher = self.node.create_publisher(
             VehicleCommand, 
-            "/fmu/in/vehicle_command",
+            "/vehicle1/fmu/in/vehicle_command",
             self.node.qos_profile_px4
         )
 
@@ -40,7 +40,7 @@ class PX4Publisher:
     def declareOffboardControlModePublisher(self):
         self.node.offboard_control_mode_publisher = self.node.create_publisher(
             OffboardControlMode,
-            "/fmu/in/offboard_control_mode",
+            "/vehicle1/fmu/in/offboard_control_mode",
             self.node.qos_profile_px4
         )
     
@@ -48,19 +48,19 @@ class PX4Publisher:
     def declareTrajectorySetpointPublisher(self):
         self.node.trajectory_setpoint_publisher = self.node.create_publisher(
             TrajectorySetpoint,
-            "/fmu/in/trajectory_setpoint",
+            "/vehicle1/fmu/in/trajectory_setpoint",
             self.node.qos_profile_px4
         )
     def declareAttitudeCommandPublisher(self):
         self.node.attitude_command_publisher = self.node.create_publisher(
             PathFollowingAttCmd,
-            "/fmu/in/path_following_att_cmd",
+            "/vehicle1/fmu/in/path_following_att_cmd",
             self.node.qos_profile_px4
         )
     def declareFusionWeightPublisher(self):
         self.node.fusion_weight_publisher = self.node.create_publisher(
             FusionWeight,
-            '/fmu/in/fusion_weight',
+            '/vehicle1/fmu/in/fusion_weight',
             self.node.qos_profile_px4
         )
 

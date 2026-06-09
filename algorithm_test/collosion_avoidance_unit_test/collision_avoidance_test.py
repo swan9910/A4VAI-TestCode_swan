@@ -128,6 +128,10 @@ class CollisionAvoidanceTest(Node):
                 self.offboard_mode.attitude = False
                 self.offboard_mode.velocity = True
 
+                # body → NED 변환을 매 루프마다 갱신 (DCM이 업데이트된 후)
+                self.veh_vel_set.ned_velocity = BodytoNED(self.veh_vel_set.body_velocity, self.state_var.dcm_b2n)
+                self.veh_vel_set.ned_velocity[2] = 0.0
+
                 self.pub_func_px4.publish_offboard_control_mode(self.offboard_mode)
                 self.pub_func_px4.publish_vehicle_command(self.modes.prm_offboard_mode)
 
@@ -137,7 +141,7 @@ class CollisionAvoidanceTest(Node):
     # ----------------------------------------------------------------------------------------#
     # region CALCULATION FUNC
     def set_forward_cmd(self):
-        self.veh_vel_set.body_velocity = np.array([8, 0, 0])
+        self.veh_vel_set.body_velocity = np.array([1, 0, 0])
         self.veh_vel_set.ned_velocity = BodytoNED(self.veh_vel_set.body_velocity, self.state_var.dcm_b2n)
         self.veh_vel_set.yaw = self.ca_var.yaw_0
         self.get_logger().info('yaw: ' + str(self.veh_vel_set.yaw))
