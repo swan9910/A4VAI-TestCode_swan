@@ -63,7 +63,7 @@ echo "wp.csv set: wp1+wp2 chained (21 wps, wp1 +3 alt offset, takeoff_alt=8), en
 DIAG_CSV=${FLIGHT_LOG_DIR}/$(date +%Y%m%d_%H%M%S)_integration_cpp.csv
 
 echo "[0/3] flight_logger + keepalive + auto-arm (parallel)"
-nohup python3 ${SCRIPT_DIR}/flight_logger.py \
+nohup python3 ${SCRIPT_DIR}/../lib/flight_logger.py \
   --duration ${DURATION} --csv ${DIAG_CSV} \
   > ${LOG_DIR}/flight_logger.log 2>&1 &
 nohup bash -c 'while true; do

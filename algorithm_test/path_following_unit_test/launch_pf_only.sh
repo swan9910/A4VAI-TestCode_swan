@@ -55,7 +55,7 @@ echo "wp.csv set to NED (-16.5, 70, 3) = ENU (70, -16.5, 3) for pf-only mode"
 echo "[0/6] flight_logger (offboard 와 동시 시작 — takeoff 단계 데이터까지 잡음)"
 mkdir -p /home/user/flight_logs
 DIAG_CSV=/home/user/flight_logs/$(date +%Y%m%d_%H%M%S)_pf_only.csv
-python3 ${SCRIPT_DIR}/flight_logger.py \
+python3 ${SCRIPT_DIR}/../lib/flight_logger.py \
   --duration ${DURATION} --csv ${DIAG_CSV} \
   > ${LOG_DIR}/flight_logger.log 2>&1 &
 echo "  pid=$!  csv=${DIAG_CSV}"
@@ -103,7 +103,7 @@ echo "=== pf-only test running. ==="
 echo "  Logs: ${LOG_DIR}/"
 echo "  CSV:  ${DIAG_CSV}"
 echo ""
-echo "분석: python3 ${SCRIPT_DIR}/plot_pretty4.py ${DIAG_CSV}"
+echo "분석: python3 ${SCRIPT_DIR}/../lib/plot_pretty4.py ${DIAG_CSV}"
 echo "Stop: pkill -f 'offboard.py|correct_pc_transformer|node_att_ctrl|node_MPPI_output|path_following_bridge_test|flight_logger.py'"
 
 # flight_logger 종료까지 대기 (DURATION 후 자동 종료)
