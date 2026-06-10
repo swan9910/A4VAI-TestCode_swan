@@ -10,6 +10,10 @@ source /opt/ros/jazzy/setup.bash
 source /home/user/a4vai_ws/install/setup.bash 2>/dev/null || true
 export PYTHONPATH=/usr/local/lib/python3.12/dist-packages:${PYTHONPATH}
 
+# Plan2WP 의 hardcoded workspace 경로 → 우리 container 경로로 symlink (sim 재기동 시마다 필요)
+mkdir -p /home/user/workspace/ros2/ros2_ws/src 2>/dev/null
+ln -sfn /home/user/a4vai_ws/pathplanning /home/user/workspace/ros2/ros2_ws/src/pathplanning 2>/dev/null || true
+
 # ─── 경로 설정 (Docker 내부) ────────────────────────────────────────
 CONVERT_PY="/home/user/a4vai_ws/algorithm_test/algorithm_test/path_planning_unit_test/convert_waypoints.py"
 HEIGHTMAP="/home/user/a4vai_ws/pathplanning/pathplanning/map/IMG_0268_1000.png"
@@ -55,13 +59,15 @@ restart_plan2wp() {
     sleep $HEARTBEAT_WAIT
 }
 
-# /global_waypoint_setpoint 퍼블리시 (col, row, z 순서)
+# /global_waypoint_setpoint 무한 퍼블리시 (1Hz, background — wait_plan 끝나면 kill)
 pub_segment() {
     local sc=$1 sr=$2 sz=$3 gc=$4 gr=$5 gz=$6
     echo "  publish: start=[col=$sc, row=$sr, z=$sz] → goal=[col=$gc, row=$gr, z=$gz]"
-    ros2 topic pub --once /global_waypoint_setpoint \
+    ros2 topic pub --rate 1 /global_waypoint_setpoint \
         custom_msgs/msg/GlobalWaypointSetpoint \
-        "{start_point: [${sc}.0, ${sr}.0, ${sz}.0], goal_point: [${gc}.0, ${gr}.0, ${gz}.0]}"
+        "{start_point: [${sc}.0, ${sr}.0, ${sz}.0], goal_point: [${gc}.0, ${gr}.0, ${gz}.0]}" \
+        > /dev/null 2>&1 &
+    PUB_PID=$!
 }
 
 # waypoint.txt 갱신 감지로 PSO 완료 대기
@@ -76,11 +82,12 @@ wait_plan() {
         after=$(stat -c %Y "$RESULTS/waypoint.txt" 2>/dev/null || echo 0)
         if [ "$after" -gt "$before" ]; then
             echo "  완료 (${elapsed}초)"
+            kill $PUB_PID 2>/dev/null || true   # 무한 publisher 정리
             return 0
         fi
         if [ "$elapsed" -ge "$WAIT_TIMEOUT" ]; then
             echo "  타임아웃 (${WAIT_TIMEOUT}초 초과)"
-            kill $PP_PID 2>/dev/null || true
+            kill $PUB_PID $PP_PID 2>/dev/null || true
             return 1
         fi
         echo -n "."
@@ -104,7 +111,7 @@ echo ""
 
 # GPS 좌표 입력
 echo "[ GPS 좌표 입력 ]  형식: lat lon  (예: 36.729077 127.441927)"
-declare -a ROWS COLS ZS LABELS
+declare -a ROWS COLS ZS LABELS LATS LONS
 
 for ((i=0; i<N_PTS; i++)); do
     if   [ $i -eq 0 ];            then LABELS[$i]="Start"
@@ -138,10 +145,19 @@ assert -180 <= lon <= 180, 'lon out of range'
         fi
 
         ROWS[$i]=$r; COLS[$i]=$c; ZS[$i]=$z
+        LATS[$i]=$lat; LONS[$i]=$lon
         echo "    → pixel(row=$r, col=$c, z=$z)"
         break
     done
 done
+
+# 사용자 입력 GPS 저장 (도달 monitor 가 읽음)
+INPUT_GPS_FILE="$RESULTS/input_gps.txt"
+> "$INPUT_GPS_FILE"
+for ((i=0; i<N_PTS; i++)); do
+    echo "${LABELS[$i]} ${LATS[$i]} ${LONS[$i]}" >> "$INPUT_GPS_FILE"
+done
+echo "  입력 GPS 저장: $INPUT_GPS_FILE ($N_PTS 점)"
 
 echo ""
 echo "[ heartbeat 퍼블리시 ]"
