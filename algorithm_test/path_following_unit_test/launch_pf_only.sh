@@ -87,6 +87,12 @@ echo "  pid=$!"
 
 sleep 2
 
+echo "[4.5/6] wp_publisher (orchestrator 의 set_wp 가 토픽 발행 안 함, 별도 publisher 필요)"
+python3 ${SCRIPT_DIR}/../ca_pf_integrated_test/wp_publisher.py \
+  --wp-csv ${WP_CSV} --repeat 5 --period 1.0 \
+  > ${LOG_DIR}/wp_publisher.log 2>&1 &
+sleep 1
+
 echo "[5/6] path_following_bridge_test (orchestrator + fusion_weight ramp)"
 ros2 run algorithm_test path_following_bridge_test \
   > ${LOG_DIR}/orchestrator.log 2>&1 &

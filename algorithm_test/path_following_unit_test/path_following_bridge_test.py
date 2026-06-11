@@ -48,7 +48,7 @@ class PathFollowingBridgeTest(Node):
     def __init__(self):
         super().__init__("path_following_bridge_test")
 
-        dir = os.path.dirname(os.path.abspath(__file__))
+        dir = os.path.dirname(os.path.abspath(__file__)).replace("/build/", "/")
         sim_name = "pf_bridge_test"
         set_initial_variables(self, dir, sim_name)
 
