@@ -97,13 +97,31 @@ nohup bash -c '
   echo "[auto-arm] FAILED after 45 attempts"
 ' > ${LOG_DIR}/auto_arm.log 2>&1 &
 
-echo "[1/3] offboard.py + correct_pc + ego_planner + mode_switcher + pf 노드 + wp_publisher (전부 parallel)"
+echo "[1a/3] offboard.py + correct_pc (이륙만 먼저)"
 nohup python3 /home/user/ros2_ws/src/ego-planner-a4vai/offboard_integration.py \
   --ros-args -p takeoff_alt:=${TAKEOFF_ALT} -p yaw_offset_deg:=0.0 \
   -p goal_x:=${GOAL_X} -p goal_y:=${GOAL_Y} -p goal_z:=${GOAL_Z} \
   > ${LOG_DIR}/offboard.log 2>&1 &
 nohup python3 /home/user/ros2_ws/src/ego-planner-a4vai/correct_pc_transformer.py \
   > ${LOG_DIR}/pc_transformer.log 2>&1 &
+
+# 이륙 완료 대기 — offboard.py 가 STATE_PLANNER_READY 진입 시 "Ready! Pos(ENU)" 로그
+echo "  이륙 대기..."
+TAKEOFF_TIMEOUT=120
+TAKEOFF_DONE=0
+for i in $(seq 1 ${TAKEOFF_TIMEOUT}); do
+  sleep 1
+  if grep -q "Ready! Pos(ENU)" ${LOG_DIR}/offboard.log 2>/dev/null; then
+    echo "  ★ 이륙 완료 (${i}s)"
+    TAKEOFF_DONE=1; break
+  fi
+done
+if [ ${TAKEOFF_DONE} -eq 0 ]; then
+  echo "  ✗ 이륙 timeout (${TAKEOFF_TIMEOUT}s) — PF/CA 그대로 진행"
+fi
+sleep 2   # PLANNER_READY 후 hover 안정화
+
+echo "[1b/3] ego_planner + mode_switcher + pf 노드 + wp_publisher (PF/CA 활성화)"
 nohup ros2 launch ego_planner airsim_px4.launch.py \
   map_size_x:=600.0 map_size_y:=600.0 map_size_z:=50.0 \
   max_vel:=3.0 \
@@ -111,6 +129,7 @@ nohup ros2 launch ego_planner airsim_px4.launch.py \
 nohup python3 ${SCRIPT_DIR}/mode_switcher.py \
   --dist-ca-enter 6.0 --dist-pf-enter 10.0 \
   --rate 20 --pf-cap 1.0 --ramp-time 0.0 \
+  --takeoff-alt ${TAKEOFF_ALT} \
   > ${LOG_DIR}/mode_switcher.log 2>&1 &
 nohup ros2 run pathfollowing node_att_ctrl > ${LOG_DIR}/att_ctrl.log 2>&1 &
 nohup ros2 run pathfollowing node_MPPI_output > ${LOG_DIR}/mppi.log 2>&1 &
@@ -122,6 +141,8 @@ nohup python3 ${SCRIPT_DIR}/wp_publisher.py \
   > ${LOG_DIR}/wp_publisher.log 2>&1 &
 nohup python3 ${SCRIPT_DIR}/pc_accumulator.py \
   > ${LOG_DIR}/pc_accumulator.log 2>&1 &
+
+sleep 5   # ego_planner_node bring-up 대기
 
 echo "[2/3] goal — service call (retry until success)"
 GOAL_SENT=0

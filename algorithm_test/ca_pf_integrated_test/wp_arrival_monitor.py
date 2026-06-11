@@ -12,8 +12,8 @@ import sys
 import time
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-from px4_msgs.msg import VehicleGlobalPosition
+from rclpy.qos import qos_profile_sensor_data
+from px4_msgs.msg import SensorGps
 
 R_EARTH = 6371000.0
 
@@ -35,16 +35,11 @@ class ArrivalMonitor(Node):
         self.threshold = threshold_m
         self.t0 = time.time()
 
-        qos = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
-            history=HistoryPolicy.KEEP_LAST,
-            depth=5,
-        )
         self.sub = self.create_subscription(
-            VehicleGlobalPosition,
-            "/vehicle1/fmu/out/vehicle_global_position",
+            SensorGps,
+            "/vehicle1/fmu/out/vehicle_gps_position",
             self.cb,
-            qos,
+            qos_profile_sensor_data,
         )
         self.get_logger().info(
             f"monitor 시작: {len(targets)} 점, threshold={threshold_m}m"
@@ -53,7 +48,9 @@ class ArrivalMonitor(Node):
             self.get_logger().info(f"  · {lab}: ({la}, {lo})")
 
     def cb(self, msg):
-        lat, lon, alt = msg.lat, msg.lon, msg.alt
+        lat = msg.latitude_deg
+        lon = msg.longitude_deg
+        alt = msg.altitude_msl_m
         for i, (label, t_lat, t_lon) in enumerate(self.targets):
             if self.reached[i]:
                 continue

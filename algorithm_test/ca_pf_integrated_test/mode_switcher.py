@@ -46,7 +46,8 @@ SELF_RETURN_SKIP = 0.3   # m, 가까운 self-return / noise 무시
 
 
 class ModeSwitcher(Node):
-    def __init__(self, dist_ca, dist_pf, rate_hz, manual_mode, pf_cap, ramp_time=0.0, csv_log=None):
+    def __init__(self, dist_ca, dist_pf, rate_hz, manual_mode, pf_cap, ramp_time=0.0, csv_log=None,
+                 takeoff_alt=0.0, takeoff_ratio=0.9):
         super().__init__('mode_switcher')
 
         assert dist_ca < dist_pf, 'dist_ca_enter must be < dist_pf_enter for hysteresis'
@@ -55,6 +56,11 @@ class ModeSwitcher(Node):
         self.manual_mode = manual_mode
         self.pf_cap = float(pf_cap)
         self.ramp_time = float(ramp_time)
+        # takeoff guard: drone z < takeoff_alt * takeoff_ratio 동안 fusion=0 강제
+        # (이륙 중 PF 가 wp[0] 향한 attitude cmd 내서 급발진하는 문제 방지)
+        self.takeoff_alt = float(takeoff_alt)
+        self.takeoff_guard_z = self.takeoff_alt * float(takeoff_ratio)
+        self.takeoff_done = (self.takeoff_alt <= 0.0)  # alt=0 이면 guard 비활성
         self.csv_log = csv_log
         # ramp state
         self.t_switch = None      # 마지막 mode 전환 시각
@@ -146,8 +152,19 @@ class ModeSwitcher(Node):
 
         d = self._min_dist()
 
+        # takeoff guard: 이륙 미완료면 무조건 CA mode + fusion=0
+        if not self.takeoff_done:
+            if self.drone_pos[2] >= self.takeoff_guard_z:
+                self.takeoff_done = True
+                self.get_logger().info(
+                    f'☑ takeoff guard 해제 (z={self.drone_pos[2]:.2f}m ≥ {self.takeoff_guard_z:.2f}m)')
+            else:
+                self.current_mode = 0
+
         if self.manual_mode is not None:
             self.current_mode = self.manual_mode
+        elif not self.takeoff_done:
+            pass  # guard 중엔 strict switch 안 함
         elif d is None:
             # lidar 데이터 없음 — 모드 전환 안 함 (안전 측면, 초기 race 방지)
             pass
@@ -234,6 +251,10 @@ def main():
     parser.add_argument('--ramp-time', type=float, default=0.0,
                         help='mode 전환 시 fusion 보간 시간 (s, 0=strict instant)')
     parser.add_argument('--csv-log', type=str, default=None)
+    parser.add_argument('--takeoff-alt', type=float, default=0.0,
+                        help='이륙 목표 alt (ENU, m). 0 이면 guard 비활성')
+    parser.add_argument('--takeoff-ratio', type=float, default=0.9,
+                        help='drone z >= takeoff_alt * ratio 일 때 guard 해제')
     args, _ = parser.parse_known_args()
 
     rclpy.init()
@@ -243,6 +264,8 @@ def main():
         rate_hz=args.rate,
         manual_mode=args.manual,
         pf_cap=args.pf_cap,
+        takeoff_alt=args.takeoff_alt,
+        takeoff_ratio=args.takeoff_ratio,
         ramp_time=args.ramp_time,
         csv_log=args.csv_log,
     )

@@ -75,6 +75,10 @@ class FlightLogger(Node):
         self.ned_vel = (0.0, 0.0, 0.0)
         self.reset_xy = 0
         self.reset_z = 0
+        # GPS (vehicle_local_position 의 ref_lat/lon/alt + NED 로 계산)
+        self.gps_lat = float('nan')
+        self.gps_lon = float('nan')
+        self.gps_alt = float('nan')
         self.enu_pos = (0.0, 0.0, 0.0)
         self.quat = (1.0, 0.0, 0.0, 0.0)  # w, x, y, z
         self.have_local_pos = False   # 첫 vehicle_local_position 수신 전엔 row 안 씀
@@ -169,6 +173,7 @@ class FlightLogger(Node):
                 'ned_x', 'ned_y', 'ned_z',
                 'ned_vx', 'ned_vy', 'ned_vz',
                 'reset_xy', 'reset_z',
+                'gps_lat', 'gps_lon', 'gps_alt',
                 'enu_x', 'enu_y', 'enu_z',
                 'qw', 'qx', 'qy', 'qz',
                 'roll_deg', 'pitch_deg', 'yaw_deg',
@@ -208,6 +213,15 @@ class FlightLogger(Node):
         self.ned_vel = (msg.vx, msg.vy, msg.vz)
         self.reset_xy = int(msg.xy_reset_counter)
         self.reset_z = int(msg.z_reset_counter)
+        # NED → GPS: ref_lat/ref_lon/ref_alt + msg.x(north) / msg.y(east) / msg.z(down)
+        if msg.xy_global and msg.z_global:
+            R = 6378137.0
+            dlat = msg.x / R
+            cos_ref = math.cos(math.radians(msg.ref_lat))
+            dlon = msg.y / (R * cos_ref) if abs(cos_ref) > 1e-9 else 0.0
+            self.gps_lat = msg.ref_lat + math.degrees(dlat)
+            self.gps_lon = msg.ref_lon + math.degrees(dlon)
+            self.gps_alt = msg.ref_alt - msg.z  # NED down → alt 위로 양수
 
     def _cb_enu(self, msg):
         p = msg.pose.pose.position
@@ -324,6 +338,9 @@ class FlightLogger(Node):
             round(self.ned_pos[0], 4), round(self.ned_pos[1], 4), round(self.ned_pos[2], 4),
             round(self.ned_vel[0], 4), round(self.ned_vel[1], 4), round(self.ned_vel[2], 4),
             self.reset_xy, self.reset_z,
+            round(self.gps_lat, 7) if not math.isnan(self.gps_lat) else 'nan',
+            round(self.gps_lon, 7) if not math.isnan(self.gps_lon) else 'nan',
+            round(self.gps_alt, 3) if not math.isnan(self.gps_alt) else 'nan',
             round(self.enu_pos[0], 4), round(self.enu_pos[1], 4), round(self.enu_pos[2], 4),
             round(self.quat[0], 6), round(self.quat[1], 6),
             round(self.quat[2], 6), round(self.quat[3], 6),

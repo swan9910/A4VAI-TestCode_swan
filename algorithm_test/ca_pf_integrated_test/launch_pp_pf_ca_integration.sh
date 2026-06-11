@@ -38,7 +38,13 @@ fi
 read -r GOAL_X GOAL_Y GOAL_Z N_WPS <<< $(python3 - <<PYEOF
 import numpy as np
 d = np.loadtxt('$PX4_TXT')
+# 모든 wp 에 takeoff_alt 더함 (지면 위 ALT_OFFSET m clearance)
 d[:, 2] += $ALT_OFFSET
+# 첫 두 wp 만 z = takeoff_alt 로 강제 (이륙 hover 위치 일치)
+if len(d) >= 1:
+    d[0, 2] = $ALT_OFFSET
+if len(d) >= 2:
+    d[1, 2] = $ALT_OFFSET
 with open('$WP_CSV', 'w') as f:
     f.write('x,y,z\n')
     for r in d:
@@ -57,15 +63,15 @@ echo "  Takeoff alt: ${TAKEOFF_ALT}m"
 if [ -f "$INPUT_GPS" ]; then
     echo ""
     echo "[Step 2.5/3] wp_arrival_monitor 시작 (threshold=${ARRIVAL_THRESHOLD}m)"
-    mkdir -p /home/user/a4vai_ws/logs/integration_cpp
+    mkdir -p /home/user/a4vai_ws/logs
     # ros2 환경 source (wrapper 단독 실행 시 px4_msgs 못 찾을 수 있음)
     source /opt/ros/jazzy/setup.bash
     source /home/user/realgazebo/RealGazebo-ROS2/install/setup.bash 2>/dev/null || true
     nohup python3 "${SCRIPT_DIR}/wp_arrival_monitor.py" \
         --input-gps "$INPUT_GPS" --threshold "$ARRIVAL_THRESHOLD" \
-        > /home/user/a4vai_ws/logs/integration_cpp/wp_arrival.log 2>&1 &
+        > /home/user/a4vai_ws/logs/wp_arrival.log 2>&1 &
     MON_PID=$!
-    echo "  monitor PID=$MON_PID  log=logs/integration_cpp/wp_arrival.log"
+    echo "  monitor PID=$MON_PID  log=logs/wp_arrival.log (int_script rm 회피)"
 else
     echo "  ⚠ $INPUT_GPS 없음 — monitor skip"
 fi
