@@ -144,11 +144,19 @@ nohup python3 ${SCRIPT_DIR}/pc_accumulator.py \
 
 sleep 5   # ego_planner_node bring-up 대기
 
+# ego_planner 초기 goal = wp[2] (PSO 첫 진짜 wp). final goal 향한 직진 회피.
+# ca_advance_wp 가 heading_wp_idx 따라 자동으로 다음 wp 로 update.
+INIT_LINE=$(sed -n "4p" ${WP_CSV} | tr -d " ")
+INIT_GX=$(echo $INIT_LINE | cut -d, -f1)
+INIT_GY=$(echo $INIT_LINE | cut -d, -f2)
+INIT_GZ=$(echo $INIT_LINE | cut -d, -f3)
+echo "  초기 ego goal = wp[2] = ($INIT_GX, $INIT_GY, $INIT_GZ)  (final goal: $GOAL_X,$GOAL_Y,$GOAL_Z 는 ca_advance_wp 가 update)"
+
 echo "[2/3] goal — service call (retry until success)"
 GOAL_SENT=0
 for ATTEMPT in 1 2 3 4 5 6 7 8 9 10; do
   if timeout 5 ros2 service call /ego_planner/set_goal traj_utils/srv/SetGoal \
-       "{goal: {x: ${GOAL_X}, y: ${GOAL_Y}, z: ${GOAL_Z}}}" \
+       "{goal: {x: ${INIT_GX}, y: ${INIT_GY}, z: ${INIT_GZ}}}" \
        >> ${LOG_DIR}/goal_pub.log 2>&1; then
     if grep -q "goal accepted" ${LOG_DIR}/goal_pub.log; then
       echo "  ★ goal accepted (attempt ${ATTEMPT})"
