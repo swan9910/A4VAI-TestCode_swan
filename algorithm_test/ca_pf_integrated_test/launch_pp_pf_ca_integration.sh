@@ -15,7 +15,7 @@ INT_SCRIPT="${SCRIPT_DIR}/launch_integration_cpp.sh"
 PX4_TXT="/home/user/a4vai_ws/pathplanning/pathplanning/Results_Images/path_final_px4.txt"
 INPUT_GPS="/home/user/a4vai_ws/pathplanning/pathplanning/Results_Images/input_gps.txt"
 WP_CSV="/home/user/a4vai_ws/install/algorithm_test/lib/python3.12/site-packages/algorithm_test/path_following_unit_test/wp.csv"
-ALT_OFFSET=${ALT_OFFSET:-5}
+ALT_OFFSET=${ALT_OFFSET:-7}
 ARRIVAL_THRESHOLD=${ARRIVAL_THRESHOLD:-5.0}
 
 echo "╔══════════════════════════════════════════════════════════╗"
@@ -81,4 +81,12 @@ echo ""
 echo "[Step 3/3] CA + PF 통합 비행 launcher 실행"
 export SKIP_WP_GEN=1
 export GOAL_X GOAL_Y GOAL_Z TAKEOFF_ALT
+finalize_overlay() {
+    echo ""
+    echo "[overlay] PSO + actual flight 합성 이미지 생성"
+    python3 ${SCRIPT_DIR}/../lib/plot_overlay.py 2>&1 | tail -2
+}
+trap finalize_overlay EXIT INT TERM
+
 bash "$INT_SCRIPT"
+
