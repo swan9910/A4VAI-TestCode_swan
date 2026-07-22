@@ -155,14 +155,6 @@ bash /home/user/a4vai_ws/algorithm_test/algorithm_test/ca_pf_integrated_test/lau
 
 ---
 
-## 알려진 이슈
-
-- **원점 오세팅** (실기체 로그 `log_36`, `log_34`): EKF `ref_alt` 이 지면보다 13.5m 아래로 잡힘 → PF waypoint z 오해 → crash 원인. 원인 규명 필요 (log_replay 로 재현 검토).
-- **`max_thrust_per_rotor`** (실기체 배포 시): 현재 lyj801 config 는 iris 값 7.0664 N. 실 모터 (AIR2216II-KV920 + T1045II) 는 13.4 N. 실기체 배포 전 반드시 변경.
-- **PF-only 6/11 실행 실패**: min_fusion=0 로 CA 개입 발생. PF-only launcher 셋업 이슈 확인 필요.
-
----
-
 ## 관련 링크
 
 - Fork: https://github.com/swan9910/A4VAI-PathFollowing
