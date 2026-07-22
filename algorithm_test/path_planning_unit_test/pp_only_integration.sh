@@ -110,15 +110,18 @@ echo "  → PSO $N_SEGS 회 실행 예정"
 echo ""
 
 # GPS 좌표 입력
-echo "[ GPS 좌표 입력 ]  형식: lat lon  (예: 36.729077 127.441927)"
 declare -a ROWS COLS ZS LABELS LATS LONS
-
 for ((i=0; i<N_PTS; i++)); do
     if   [ $i -eq 0 ];            then LABELS[$i]="Start"
     elif [ $i -eq $((N_PTS-1)) ]; then LABELS[$i]="Goal"
     else                               LABELS[$i]="WP$i"
     fi
+done
 
+echo "[ GPS 좌표 입력 ]  형식: lat,lon  또는  lat lon  (예: 36.729077, 127.441927)"
+echo "  $N_PTS 점을 한 줄씩 입력 (한꺼번에 paste 가능). 잘못 입력하면 다시 받음."
+
+for ((i=0; i<N_PTS; i++)); do
     while true; do
         echo -n "  ${LABELS[$i]}: "
         read -r input
@@ -242,3 +245,10 @@ echo "║  완료!  Results_Images/path_final.txt        (픽셀)  ║"
 echo "║          Results_Images/path_final_px4.txt (PX4) ║"
 echo "║          Results_Images/path_final_2d.png             ║"
 echo "╚═══════════════════════════════════════════╝"
+
+# ─── PSO 결과 UDP 전송 (실시간 viz 컴퓨터로) ───────────────
+if [ -f "$RESULTS/path_final.txt" ]; then
+  python3 /home/user/a4vai_ws/algorithm_test/algorithm_test/lib/pp_path_broadcaster.py \
+    --ip 100.68.0.70 --port 45680 \
+    --path "$RESULTS/path_final.txt" || true
+fi

@@ -53,7 +53,7 @@ fw = fl['fw']
 img = mpimg.imread(HEIGHTMAP)
 fig, ax = plt.subplots(figsize=(12, 12))
 ax.imshow(img, cmap='gray')
-ax.plot(pso_col, pso_row, 'c--', linewidth=1.5, label='PSO path', alpha=0.8)
+ax.plot(pso_col, pso_row, '-', linewidth=3, color='#00FF7F', label='PSO path', alpha=0.95)
 ax.plot(pso_col[0], pso_row[0], 'go', markersize=12, label='Start')
 ax.plot(pso_col[-1], pso_row[-1], 'bo', markersize=12, label='Goal')
 ca = fw <= 0.5; pf = fw > 0.5

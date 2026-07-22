@@ -75,6 +75,7 @@ class ModeSwitcher(Node):
 
         # 상태
         self.drone_pos = np.zeros(3)
+        self.drone_yaw = 0.0
         self.latest_pts = None
         self.last_pts_time = 0.0
         self.current_mode = 0          # 시작: CA 안전
@@ -123,20 +124,34 @@ class ModeSwitcher(Node):
             msg.pose.pose.position.y,
             msg.pose.pose.position.z,
         ])
+        q = msg.pose.pose.orientation
+        # yaw (z-axis rotation) from quaternion
+        self.drone_yaw = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
 
     def _min_dist(self):
         """drone 주위 lidar 점들 중 가장 가까운 3D 거리 — slab ±SLAB_HALF m 안 점만 (지면 제외).
         하강 시 drone alt 가 작아지면 slab 도 자연 따라감 → ground 가 slab 안에 들어와 안전.
         lidar 데이터 없거나 stale 이면 None 반환 — mode 전환 안 함."""
-        SLAB_HALF = 2.0   # drone z ±2m slab
+        # 비대칭 slab hysteresis (CA 모드 = 잡힘 / PF 모드 = 안잡힘)
+        SLAB_UP   = 4.0 if self.current_mode == 0 else 3.0   # 위쪽 obstacle (드론보다 높은 점)
+        SLAB_DOWN = 2.5 if self.current_mode == 0 else 1.5   # 아래쪽 obstacle (드론보다 낮은 점)
         if self.latest_pts is None or len(self.latest_pts) == 0:
             return None
         if (time.time() - self.last_pts_time) > 1.0:
             return None
         pts = self.latest_pts
         drone_pos = self.drone_pos.astype(np.float32)
-        # slab 필터: |pt.z - drone.z| < SLAB_HALF
-        slab_mask = np.abs(pts[:, 2] - drone_pos[2]) < SLAB_HALF
+        # body y slab 비대칭 (drone yaw 기준 좌우)
+        SLAB_BODY_Y = 4.0 if self.current_mode == 0 else 3.0
+        dz = pts[:, 2] - drone_pos[2]
+        z_mask = np.where(dz >= 0, dz < SLAB_UP, -dz < SLAB_DOWN)
+        # world (dx,dy) → body (bx forward, by left)
+        dx = pts[:, 0] - drone_pos[0]
+        dy = pts[:, 1] - drone_pos[1]
+        cy = float(np.cos(self.drone_yaw)); sy = float(np.sin(self.drone_yaw))
+        body_y = -dx*sy + dy*cy
+        y_mask = np.abs(body_y) < SLAB_BODY_Y
+        slab_mask = z_mask & y_mask
         if not slab_mask.any():
             return float('inf')   # slab 안 점 없음 = open space
         pts_slab = pts[slab_mask]

@@ -127,10 +127,17 @@ nohup ros2 launch ego_planner airsim_px4.launch.py \
   max_vel:=3.0 \
   > ${LOG_DIR}/ego_planner.log 2>&1 &
 nohup python3 ${SCRIPT_DIR}/mode_switcher.py \
-  --dist-ca-enter 6.0 --dist-pf-enter 10.0 \
-  --rate 20 --pf-cap 1.0 --ramp-time 0.0 \
+  --dist-ca-enter 8.0 --dist-pf-enter 10.0 \
+  --rate 20 --pf-cap 1.0 --ramp-time 0.5 \
   --takeoff-alt ${TAKEOFF_ALT} \
   > ${LOG_DIR}/mode_switcher.log 2>&1 &
+nohup python3 ${SCRIPT_DIR}/../lib/flight_streamer.py \
+  --ip 100.68.0.70 --port 45680 --rate 10.0 \
+  > ${LOG_DIR}/flight_streamer.log 2>&1 &
+
+nohup python3 ${SCRIPT_DIR}/mode_broadcaster.py \
+  --ip 100.68.0.70 --port 45678 --rate 1.0 \
+  > ${LOG_DIR}/mode_broadcaster.log 2>&1 &
 nohup ros2 run pathfollowing node_att_ctrl > ${LOG_DIR}/att_ctrl.log 2>&1 &
 nohup ros2 run pathfollowing node_MPPI_output > ${LOG_DIR}/mppi.log 2>&1 &
 nohup python3 ${SCRIPT_DIR}/pf_attitude_smoother.py \
